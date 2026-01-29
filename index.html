@@ -7,30 +7,36 @@
     <title>Calculator</title>
   </head>
   <body>
-    <div>
-      <div class="title">This is my Calculator</div>
+    <div class="container">
+      <h1 class="title">Calculator</h1>
       <div class="main">
         <div class="display">
-          <input type="text" id="display" readonly />
+          <input 
+            type="text" 
+            id="display" 
+            readonly 
+            aria-label="Calculator display"
+            tabindex="0"
+          />
         </div>
         <div class="buttons">
-          <button class="operator">+</button>
-          <button class="operator">-</button>
-          <button class="operator">*</button>
-          <button class="operator">/</button>
-          <button class="number">9</button>
-          <button class="number">8</button>
-          <button class="number">7</button>
-          <button id="egal" class="equal">=</button>
-          <button class="number">6</button>
-          <button class="number">5</button>
-          <button class="number">4</button>
-          <button class="number">3</button>
-          <button class="number">2</button>
-          <button class="number">1</button>
-          <button class="number">0</button>
-          <button class="number">.</button>
-          <button id="clear">Delete</button>
+          <button class="operator" aria-label="Add">+</button>
+          <button class="operator" aria-label="Subtract">-</button>
+          <button class="operator" aria-label="Multiply">×</button>
+          <button class="operator" aria-label="Divide">÷</button>
+          <button class="number" aria-label="Nine">9</button>
+          <button class="number" aria-label="Eight">8</button>
+          <button class="number" aria-label="Seven">7</button>
+          <button id="equals" class="equal" aria-label="Equals">=</button>
+          <button class="number" aria-label="Six">6</button>
+          <button class="number" aria-label="Five">5</button>
+          <button class="number" aria-label="Four">4</button>
+          <button class="number" aria-label="Three">3</button>
+          <button class="number" aria-label="Two">2</button>
+          <button class="number" aria-label="One">1</button>
+          <button class="number" aria-label="Zero">0</button>
+          <button class="number" aria-label="Decimal point">.</button>
+          <button id="clear" class="clear" aria-label="Clear">AC</button>
         </div>
       </div>
     </div>

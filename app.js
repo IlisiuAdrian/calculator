@@ -1,57 +1,119 @@
+// ===== DOM ELEMENTS =====
 const display = document.getElementById("display");
-
 const numberButtons = document.querySelectorAll(".number");
 const operatorButtons = document.querySelectorAll(".operator");
-const equalsButton = document.getElementById("egal");
-const deleteButton = document.getElementById("delete");
+const equalsButton = document.getElementById("equals");
+const clearButton = document.getElementById("clear");
 
-let firstOperand = "";
-let secondOperand = "";
-let currentOperator = null;
-let shouldResetDisplay = false;
+// ===== STATE MANAGEMENT =====
+const calculatorState = {
+  firstOperand: null,
+  currentOperator: null,
+  shouldResetDisplay: false,
+  waitingForOperand: false,
+};
 
-// ===== FUNCTIONS =====
+// ===== UTILITY FUNCTIONS =====
+const formatNumber = (num) => {
+  if (typeof num !== "number" || isNaN(num)) return "0";
 
-function appendNumber(number) {
-  if (shouldResetDisplay) {
-    display.value = "";
-    shouldResetDisplay = false;
+  // Handle very large or very small numbers
+  if (Math.abs(num) > 999999999 || (Math.abs(num) < 0.0000001 && num !== 0)) {
+    return num.toExponential(5);
   }
 
-  if (number === "." && display.value.includes(".")) return;
+  // Round to avoid floating point precision issues
+  const rounded = Math.round(num * 100000000) / 100000000;
+  return rounded.toString();
+};
 
-  display.value += number;
-}
+const updateDisplay = (value) => {
+  display.value = value || "0";
+};
 
-function chooseOperator(operator) {
-  if (display.value === "") return;
+const resetCalculator = () => {
+  calculatorState.firstOperand = null;
+  calculatorState.currentOperator = null;
+  calculatorState.shouldResetDisplay = false;
+  calculatorState.waitingForOperand = false;
+  updateDisplay("0");
+};
 
-  if (firstOperand !== "") {
-    calculate();
+// ===== CORE FUNCTIONS =====
+const appendNumber = (number) => {
+  if (calculatorState.shouldResetDisplay || calculatorState.waitingForOperand) {
+    updateDisplay("");
+    calculatorState.shouldResetDisplay = false;
+    calculatorState.waitingForOperand = false;
   }
 
-  firstOperand = display.value;
-  currentOperator = operator;
-  shouldResetDisplay = true;
-}
+  const currentValue = display.value === "0" ? "" : display.value;
 
-function calculate() {
-  if (currentOperator === null || shouldResetDisplay) return;
+  // Prevent multiple decimal points
+  if (number === "." && currentValue.includes(".")) return;
 
-  secondOperand = display.value;
+  // Prevent leading zeros
+  if (number === "0" && currentValue === "") return;
 
-  let result = operate(
-    currentOperator,
-    parseFloat(firstOperand),
-    parseFloat(secondOperand),
-  );
+  updateDisplay(currentValue + number);
+};
 
-  display.value = result;
-  firstOperand = result;
-  currentOperator = null;
-}
+const normalizeOperator = (operator) => {
+  // Map display symbols to actual operators
+  const operatorMap = {
+    "×": "*",
+    "÷": "/",
+    "*": "*",
+    "/": "/",
+    "+": "+",
+    "-": "-",
+  };
+  return operatorMap[operator] || operator;
+};
 
-function operate(operator, a, b) {
+const chooseOperator = (operator) => {
+  const normalizedOperator = normalizeOperator(operator);
+  const currentValue = parseFloat(display.value);
+
+  if (calculatorState.firstOperand === null) {
+    calculatorState.firstOperand = currentValue;
+  } else if (!calculatorState.waitingForOperand) {
+    const result = performCalculation();
+    updateDisplay(formatNumber(result));
+    calculatorState.firstOperand = result;
+  }
+
+  calculatorState.currentOperator = normalizedOperator;
+  calculatorState.waitingForOperand = true;
+  calculatorState.shouldResetDisplay = true;
+};
+
+const performCalculation = () => {
+  if (calculatorState.currentOperator === null || calculatorState.firstOperand === null) {
+    return parseFloat(display.value) || 0;
+  }
+
+  const secondOperand = parseFloat(display.value) || 0;
+  const result = operate(calculatorState.currentOperator, calculatorState.firstOperand, secondOperand);
+
+  return result;
+};
+
+const calculate = () => {
+  if (calculatorState.currentOperator === null || calculatorState.waitingForOperand) {
+    return;
+  }
+
+  const result = performCalculation();
+  updateDisplay(formatNumber(result));
+
+  calculatorState.firstOperand = result;
+  calculatorState.currentOperator = null;
+  calculatorState.waitingForOperand = true;
+  calculatorState.shouldResetDisplay = true;
+};
+
+const operate = (operator, a, b) => {
   switch (operator) {
     case "+":
       return a + b;
@@ -60,19 +122,28 @@ function operate(operator, a, b) {
     case "*":
       return a * b;
     case "/":
-      if (b === 0) return "Error";
+      if (b === 0) {
+        resetCalculator();
+        return "Error";
+      }
       return a / b;
     default:
-      return null;
+      return b;
   }
-}
+};
 
-function deleteLast() {
-  display.value = display.value.slice(0, -1);
-}
+const deleteLast = () => {
+  if (calculatorState.waitingForOperand) return;
+
+  const currentValue = display.value;
+  if (currentValue.length > 1) {
+    updateDisplay(currentValue.slice(0, -1));
+  } else {
+    updateDisplay("0");
+  }
+};
 
 // ===== EVENT LISTENERS =====
-
 numberButtons.forEach((button) => {
   button.addEventListener("click", () => {
     appendNumber(button.textContent);
@@ -85,20 +156,45 @@ operatorButtons.forEach((button) => {
   });
 });
 
-equalsButton.addEventListener("click", calculate);
+if (equalsButton) {
+  equalsButton.addEventListener("click", calculate);
+}
 
-deleteButton.addEventListener("click", deleteLast);
+if (clearButton) {
+  clearButton.addEventListener("click", resetCalculator);
+}
 
-// ===== Keyboard support =====
-
+// ===== KEYBOARD SUPPORT =====
 document.addEventListener("keydown", (e) => {
-  if (!isNaN(e.key)) appendNumber(e.key);
+  // Prevent default for calculator keys
+  if (["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "+", "-", "*", "/", "Enter", "Backspace", "Escape"].includes(e.key)) {
+    e.preventDefault();
+  }
 
-  if (e.key === ".") appendNumber(".");
+  if (!isNaN(e.key) && e.key !== " ") {
+    appendNumber(e.key);
+  }
 
-  if (["+", "-", "*", "/"].includes(e.key)) chooseOperator(e.key);
+  if (e.key === ".") {
+    appendNumber(".");
+  }
 
-  if (e.key === "Enter") calculate();
+  if (["+", "-", "*", "/"].includes(e.key)) {
+    chooseOperator(e.key);
+  }
 
-  if (e.key === "Backspace") deleteLast();
+  if (e.key === "Enter" || e.key === "=") {
+    calculate();
+  }
+
+  if (e.key === "Backspace") {
+    deleteLast();
+  }
+
+  if (e.key === "Escape" || e.key === "Delete") {
+    resetCalculator();
+  }
 });
+
+// Initialize display
+updateDisplay("0");
